@@ -36,4 +36,28 @@ class User extends Authenticatable
         'password'          => 'hashed',
         'role'              => 'string',
     ];
+
+    // transaksi user
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    // langganan paket user
+    public function subscriptions()
+    {
+        return $this->hasMany(UserSubscription::class);
+    }
+
+    // bucket storage user
+    public function buckets()
+    {
+        return $this->hasMany(Bucket::class);
+    }
+
+    // kredensial rahasia user
+    public function credential()
+    {
+        return $this->hasOne(Credential::class);
+    }
 }
