@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use App\Models\UserSubscription;
 use App\Models\Bucket;
+use App\Models\SubscriptionPlan;
 use App\Services\MiniStackService;
 
 class DashboardController extends Controller
@@ -52,8 +53,13 @@ class DashboardController extends Controller
             'buckets_count' => $bucketsCount,
         ];
 
+        // Daftar paket aktif untuk form "Beli Paket IaaS" (sumber sama dengan halaman Storage)
+        $plans = SubscriptionPlan::where('is_active', true)
+            ->orderBy('price')
+            ->get();
+
         // Mengirimkan objek data ke tampilan antarmuka (View)
-        return view('dashboard', compact('user', 'realData'));
+        return view('dashboard', compact('user', 'realData', 'plans'));
     }
 
     /**
