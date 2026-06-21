@@ -1,0 +1,203 @@
+@extends('layouts.app')
+
+@section('title', 'Storage')
+
+@section('content')
+<div class="dashboard-wrapper">
+
+    <section class="page-header">
+        <div>
+            <h1 class="page-title"><i class="fa fa-database candy-text"></i> Storage</h1>
+            <p class="page-subtitle">
+                Kelola paket penyimpanan, kuota storage, bucket, dan status layanan IaaS kamu.
+            </p>
+        </div>
+        <div class="page-badge">
+            <i class="fa fa-cloud"></i> MiniStack Storage
+        </div>
+    </section>
+
+    @if (session('success'))
+        <div class="alert" style="background: rgba(0, 240, 255, 0.12); color:#00a8ba; border:1px solid rgba(0,240,255,0.25);">
+            <i class="fa fa-check-circle"></i> {{ session('success') }}
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div class="alert alert-error">
+            <i class="fa fa-circle-exclamation"></i> {{ session('error') }}
+        </div>
+    @endif
+
+    <section class="stats-grid">
+        <div class="stat-card card-storage">
+            <div class="stat-icon">
+                <i class="fa fa-box"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-label">Paket Aktif</div>
+                <div class="stat-value">{{ $activeSubscription->plan_name ?? 'Belum Ada' }}</div>
+                <p class="stat-note">Status layanan storage kamu</p>
+            </div>
+        </div>
+
+        <div class="stat-card card-cpu">
+            <div class="stat-icon">
+                <i class="fa fa-hard-drive"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-label">Total Kuota</div>
+                <div class="stat-value">
+                    {{ $activeSubscription ? $activeSubscription->storage_quota_gb : 0 }}
+                    <span>GB</span>
+                </div>
+                <p class="stat-note">Kapasitas penyimpanan aktif</p>
+            </div>
+        </div>
+
+        <div class="stat-card card-ram">
+            <div class="stat-icon">
+                <i class="fa fa-chart-pie"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-label">Terpakai</div>
+                <div class="stat-value">
+                    {{ number_format($usedStorageMb, 0) }}
+                    <span>MB</span>
+                </div>
+                <p class="stat-note">{{ number_format($remainingStorageMb, 0) }} MB tersisa</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="info-panel">
+        <h2 class="panel-title">
+            <i class="fa fa-gauge-high"></i> Penggunaan Storage
+        </h2>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-key"><i class="fa fa-percent"></i> Persentase</span>
+                <span class="info-val">{{ $usedPercent }}%</span>
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar" style="width: {{ min($usedPercent, 100) }}%"></div>
+                </div>
+            </div>
+
+            <div class="info-item">
+                <span class="info-key"><i class="fa fa-bucket"></i> Bucket</span>
+                <span class="info-val">{{ $bucket->bucket_name ?? 'Bucket belum tersedia' }}</span>
+            </div>
+
+            <div class="info-item">
+                <span class="info-key"><i class="fa fa-key"></i> Status Kredensial</span>
+                <span class="info-val">{{ $credential->status_kunci ?? 'Kredensial belum tersedia' }}</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="info-panel">
+        <h2 class="panel-title">
+            <i class="fa fa-layer-group"></i> Paket Layanan Storage
+        </h2>
+
+        <div class="plan-grid">
+            @foreach ($plans as $plan)
+                <div class="plan-card">
+                    <h3 class="plan-name">{{ $plan->name }}</h3>
+                    <p class="plan-description">{{ $plan->description }}</p>
+
+                    <div class="plan-price">
+                        Rp{{ number_format($plan->price, 0, ',', '.') }}
+                    </div>
+                    <div class="plan-period">per bulan</div>
+
+                    <div class="plan-features">
+                        <div class="plan-feature">
+                            <i class="fa fa-database"></i>
+                            Storage {{ $plan->storage_quota_gb }} GB
+                        </div>
+                        <div class="plan-feature">
+                            <i class="fa fa-box-archive"></i>
+                            Maks. Bucket {{ $plan->max_buckets }}
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ route('storage.checkout') }}" style="margin-top: 1rem;">
+                        @csrf
+
+                        <input type="hidden" name="plan_id" value="{{ $plan->id }}">
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display:block; margin-bottom:0.45rem; font-weight:800; color:var(--text-dark);">
+                                Metode Bayar
+                            </label>
+
+                            <select name="metode_bayar" required
+                                    style="width:100%; padding:0.8rem 1rem; border-radius:14px; border:1px solid #e2e8f0; font-weight:700; color:var(--text-dark);">
+                                <option value="">Pilih Metode Bayar</option>
+                                <option value="Transfer Bank">Transfer Bank</option>
+                                <option value="Virtual Account">Virtual Account</option>
+                                <option value="E-Wallet">E-Wallet</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn-primary btn-full">
+                            <i class="fa fa-cart-shopping"></i> Ajukan Sewa
+                        </button>
+                    </form>
+                </div>
+            @endforeach
+        </div>
+    </section>
+
+    <section class="info-panel">
+        <h2 class="panel-title">
+            <i class="fa fa-clock-rotate-left"></i> Riwayat Penyewaan
+        </h2>
+
+        @if ($subscriptions->isEmpty())
+            <div class="coming-soon">
+                <div class="cs-icon">🧾</div>
+                <h3>Belum Ada Riwayat</h3>
+                <p>Riwayat penyewaan akan muncul setelah kamu mengajukan paket storage.</p>
+                <div class="cs-tags">
+                    <span class="cs-tag">Checkout</span>
+                    <span class="cs-tag">Payment</span>
+                    <span class="cs-tag">Verifikasi</span>
+                </div>
+            </div>
+        @else
+            <div class="data-table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Paket</th>
+                            <th>Status Sewa</th>
+                            <th>Metode Bayar</th>
+                            <th>Status Bayar</th>
+                            <th>Mulai</th>
+                            <th>Berakhir</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($subscriptions as $subscription)
+                            <tr>
+                                <td>{{ $subscription->plan_name }}</td>
+                                <td>
+                                    <span class="badge-soft cyan">{{ $subscription->status }}</span>
+                                </td>
+                                <td>{{ $subscription->metode_bayar ?? '-' }}</td>
+                                <td>{{ $subscription->status_bayar ?? '-' }}</td>
+                                <td>{{ $subscription->subscribed_at }}</td>
+                                <td>{{ $subscription->expires_at ?? '-' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </section>
+
+</div>
+@endsection

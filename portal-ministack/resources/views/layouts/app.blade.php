@@ -26,6 +26,11 @@
             <span class="brand-icon">🍬</span>
             <span class="brand-text">Chroma<span class="brand-accent">Stack</span></span>
         </div>
+        <div class="navbar-menu">
+            <a href="{{ route('dashboard') }}" class="navbar-link">Dashboard</a>
+            <a href="{{ route('storage.index') }}" class="navbar-link">Storage</a>
+            <a href="{{ route('credentials.index') }}" class="navbar-link">Kredensial</a>
+        </div>
         <div class="navbar-right">
             <span class="navbar-user">
                 <i class="fa fa-user-circle"></i>
@@ -40,6 +45,7 @@
         </div>
     </nav>
     @endauth
+
 
     <!-- ── MAIN CONTENT ── -->
     <main class="main-content">
