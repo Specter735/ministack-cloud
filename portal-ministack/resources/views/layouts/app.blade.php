@@ -6,13 +6,12 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>ChromaStack — @yield('title', 'Cloud Platform')</title>
 
-    <!-- Google Fonts: Candy Pop Vibes -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-    <!-- ChromaStack CSS -->
     <link rel="stylesheet" href="{{ asset('css/chromastack.css') }}">
 
     @stack('styles')

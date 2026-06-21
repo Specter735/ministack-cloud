@@ -26,7 +26,7 @@
         @endif
 
         <!-- Login Form -->
-        <form method="POST" action="{{ route('login') }}" class="auth-form">
+        <form id="apiLoginForm" class="auth-form">
             @csrf
 
             <div class="form-group">

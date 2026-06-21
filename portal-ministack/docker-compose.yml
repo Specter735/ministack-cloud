@@ -3,10 +3,10 @@ version: "3.8"
 services:
     localstack:
         container_name: ministack_emulator
-        image: localstack/localstack:latest
+        image: localstack/localstack:3.4.0
         ports:
-            - "127.0.0.1:4566:4566" # Port utama komunikasi API
-            - "127.0.0.1:4510-4559:4510-4559" # Rentang port layanan pendukung
+            - "4566:4566"
+            - "4510-4559:4510-4559"
         environment:
             - DEBUG=1
             - DOCKER_HOST=unix:///var/run/docker.sock

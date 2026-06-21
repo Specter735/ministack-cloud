@@ -17,23 +17,49 @@ class LoginController extends Controller
     }
 
     /**
-     * Proses login
+     * Proses login (Hibrida: Sesi Web + Token API)
      */
     public function login(Request $request)
     {
-        // Validasi input
+        // 1. Validasi input
         $credentials = $request->validate([
             'email'    => ['required', 'email'],
             'password' => ['required'],
         ]);
 
-        // Coba autentikasi
+        // 2. Coba autentikasi Sesi Web
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            
             $request->session()->regenerate();
+
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
+
+            // Bersihkan token lama & terbitkan yang baru
+            $user->tokens()->delete();
+            $token = $user->createToken('ChromaStackToken')->plainTextToken;
+
+            // 3. PAKSA KEMBALIKAN JSON JIKA PERMINTAAN DARI JAVASCRIPT
+            if ($request->expectsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Login berhasil.',
+                    'token'   => $token,
+                ]);
+            }
+
+            // Fallback jika login dilakukan tanpa JavaScript (langsung dari browser)
             return redirect()->intended(route('dashboard'));
         }
 
-        // Jika gagal, kembalikan error
+        // 4. Jika autentikasi gagal
+        if ($request->expectsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email atau password salah.'
+            ], 401);
+        }
+
         return back()->withErrors([
             'email' => 'Email atau password salah.',
         ])->onlyInput('email');
@@ -44,9 +70,16 @@ class LoginController extends Controller
      */
     public function logout(Request $request)
     {
+        // Hapus token API pengguna menggunakan objek request agar dikenali oleh editor
+        if ($request->user()) {
+            $request->user()->tokens()->delete();
+        }
+
         Auth::logout();
+        
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+        
         return redirect()->route('login');
     }
 }

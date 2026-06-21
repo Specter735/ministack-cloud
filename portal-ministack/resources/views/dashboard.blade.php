@@ -94,6 +94,34 @@
         </div>
     </div>
 
+    </div> @if ($realData['package'] === 'Belum Berlangganan')
+        <div class="auth-card glass" style="margin-top: 20px;">
+            <h3 class="panel-title"><i class="fa fa-shopping-cart"></i> Beli Paket IaaS</h3>
+            <p style="margin-bottom: 15px;">Anda belum memiliki paket. Silakan berlangganan untuk mulai membuat S3 Bucket.</p>
+            
+            <form id="checkoutForm" class="auth-form">
+                <div class="form-group">
+                    <label for="plan_id">Pilih Paket:</label>
+                    <select id="plan_id" class="form-input" required>
+                        <option value="1">Paket Mahasiswa (1 GB)</option>
+                        <option value="2">Paket Profesional (50 GB)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="metode_bayar">Metode Pembayaran:</label>
+                    <select id="metode_bayar" class="form-input" required>
+                        <option value="Transfer Bank">Transfer Bank</option>
+                        <option value="Qris">QRIS / E-Wallet</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary btn-full">
+                    <i class="fa fa-rocket"></i> Pesan Sekarang
+                </button>
+            </form>
+            <div id="checkoutAlert" class="alert" style="display: none; margin-top: 15px;"></div>
+        </div>
+    @endif
+
     <div class="coming-soon glass">
         <div class="cs-icon">🚀</div>
         <h3>MiniStack Integration — Coming Soon</h3>
@@ -107,4 +135,75 @@
     </div>
 
 </div>
-@endsection
+@endsection @push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkoutForm = document.getElementById('checkoutForm');
+    const alertBox = document.getElementById('checkoutAlert');
+
+    if (checkoutForm) {
+        checkoutForm.addEventListener('submit', async function(e) {
+            e.preventDefault(); // Mencegah halaman termuat ulang
+
+            // 1. Ambil nilai input dari formulir
+            const planId = document.getElementById('plan_id').value;
+            const metodeBayar = document.getElementById('metode_bayar').value;
+            const submitBtn = checkoutForm.querySelector('button[type="submit"]');
+            
+            // 2. Ambil Bearer Token dari Local Storage (dihasilkan saat Login)
+            const token = localStorage.getItem('auth_token');
+
+            if (!token) {
+                showAlert('Sesi API tidak valid. Silakan logout dan login kembali.', 'error');
+                return;
+            }
+
+            // 3. Ubah antarmuka tombol menjadi status memuat (loading)
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Memproses...';
+            alertBox.style.display = 'none';
+
+            try {
+                // 4. Kirim data ke Backend API
+                const response = await axios.post('/api/iaas/checkout', {
+                    plan_id: planId,
+                    metode_bayar: metodeBayar
+                }, {
+                    headers: {
+                        'Authorization': `Bearer ${token}` // Sisipkan token di sini
+                    }
+                });
+
+                // 5. Tampilkan pesan berhasil
+                showAlert(response.data.message || 'Checkout berhasil! Menunggu verifikasi Admin.', 'success');
+                
+                // Opsional: Muat ulang halaman setelah 2 detik agar status berubah
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+
+            } catch (error) {
+                // 6. Tampilkan pesan galat
+                const errorMsg = error.response?.data?.message || 'Gagal memproses pesanan. Periksa koneksi Anda.';
+                showAlert(errorMsg, 'error');
+            } finally {
+                // 7. Kembalikan tombol ke keadaan semula
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+            }
+        });
+    }
+
+    // Fungsi pembantu untuk merender kotak peringatan (alert)
+    function showAlert(message, type) {
+        alertBox.textContent = message;
+        alertBox.style.display = 'block';
+        alertBox.style.backgroundColor = type === 'success' ? '#d4edda' : '#f8d7da';
+        alertBox.style.color = type === 'success' ? '#155724' : '#721c24';
+        alertBox.style.padding = '10px';
+        alertBox.style.borderRadius = '8px';
+    }
+});
+</script>
+@endpush
