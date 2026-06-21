@@ -7,18 +7,25 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Menjalankan migrasi untuk membangun skema tabel.
      */
     public function up(): void
     {
         Schema::create('activity_logs', function (Blueprint $table) {
             $table->id();
+            // Mendefinisikan foreign key ke tabel users
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            
+            // Mendefinisikan kolom untuk mencatat jenis aksi dan rinciannya
+            $table->string('action');
+            $table->text('description');
+            
             $table->timestamps();
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Membatalkan migrasi.
      */
     public function down(): void
     {

@@ -10,7 +10,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // akun admin untuk testing
+        // Pembuatan akun admin untuk keperluan pengujian API (Administrator)
         User::create([
             'name' => 'Admin Test',
             'email' => 'admin@ministack.test',
@@ -18,27 +18,27 @@ class DatabaseSeeder extends Seeder
             'role' => 'admin',
         ]);
 
-        // 3 Paket Layanan ke tabel subscription plans
+        // Penambahan 3 Paket Layanan IaaS dengan tema Candy Pop
         DB::table('subscription_plans')->insert([
             [
-                'name' => 'Basic',
-                'description' => 'Paket dasar untuk pengguna baru',
+                'name' => 'Spark Plan',
+                'description' => 'Paket pemula bertema ceria untuk penyimpanan data personal.',
                 'price' => 50000.00,
                 'storage_quota_gb' => 10,
                 'max_buckets' => 1,
                 'is_active' => 1,
             ],
             [
-                'name' => 'Standard',
-                'description' => 'Paket menengah dengan lebih banyak storage',
+                'name' => 'Surge Plan',
+                'description' => 'Paket menengah untuk kolaborasi tim dengan kapasitas penyimpanan ekstra.',
                 'price' => 150000.00,
                 'storage_quota_gb' => 50,
                 'max_buckets' => 3,
                 'is_active' => 1,
             ],
             [
-                'name' => 'Pro',
-                'description' => 'Paket profesional tanpa batasan ketat',
+                'name' => 'Candy Burst Plan',
+                'description' => 'Paket premium IaaS tanpa batasan ketat untuk kebutuhan tingkat enterprise.',
                 'price' => 350000.00,
                 'storage_quota_gb' => 200,
                 'max_buckets' => 10,

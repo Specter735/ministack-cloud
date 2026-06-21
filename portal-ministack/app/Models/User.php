@@ -5,13 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
-     * Kolom yang boleh diisi (mass assignment)
+     * Kolom yang diizinkan untuk diisi secara massal (mass assignment).
      */
     protected $fillable = [
         'name',
@@ -21,7 +23,7 @@ class User extends Authenticatable
     ];
 
     /**
-     * Kolom yang disembunyikan saat serialisasi
+     * Kolom yang disembunyikan saat proses serialisasi data.
      */
     protected $hidden = [
         'password',
@@ -29,7 +31,7 @@ class User extends Authenticatable
     ];
 
     /**
-     * Type casting kolom
+     * Pengecoran tipe data (Type casting) pada kolom spesifik.
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
@@ -37,25 +39,12 @@ class User extends Authenticatable
         'role'              => 'string',
     ];
 
-    // transaksi user
-    public function payments()
+    /**
+     * Relasi utama ke tabel user_subscriptions (Buku Kontrak Sewa).
+     * Satu pengguna (User) dapat memiliki banyak riwayat kontrak sewa IaaS.
+     */
+    public function subscriptions(): HasMany
     {
-        return $this->hasMany(Payment::class);
-    }
-
-    // langganan paket user
-    public function subscriptions()
-    {
-        return $this->hasMany(UserSubscription::class);
-    }
-
-    public function credential()
-    {
-        return $this->hasOne(Credential::class);
-    }
-
-    public function buckets()
-    {
-        return $this->hasMany(Bucket::class);
+        return $this->hasMany(UserSubscription::class, 'user_id');
     }
 }

@@ -15,54 +15,76 @@ class DashboardController extends Controller
     public function index()
     {
         $user = Auth::user();
+        
+        // --- Sinkronkan pemakaian storage asli dari MiniStack ---
         // $this->syncStorageUsage($user);
 
-        // --- Sinkronkan pemakaian storage asli dari MiniStack ---
-        //$this->syncStorageUsage($user);
-
-        // mengencek apakah user punya langganan yang sedang aktif
+        // Mengecek apakah pengguna memiliki kontrak langganan yang berstatus aktif
         $activeSub = UserSubscription::where('user_id', $user->id)
                         ->where('status', 'active')
                         ->first();
 
-        // jika ada maka ambil data nama paket dan kuotanya dari tabel subscription
         $paketName = 'Belum Berlangganan';
         $totalStorageGb = 0;
+        $storageUsedMb = 0;
+        $bucketsCount = 0;
 
+        // Jika langganan aktif ditemukan, sistem mengambil parameter kuota dan kalkulasi bucket
         if ($activeSub) {
             $paketName = $activeSub->plan->name;
             $totalStorageGb = $activeSub->plan->storage_quota_gb;
+
+            // Menghitung total penggunaan storage (MB) secara relasional
+            $storageUsedMb = Bucket::join('resources', 'buckets.resource_id', '=', 'resources.id')
+                ->where('resources.subscription_id', $activeSub->id)
+                ->sum('buckets.used_storage_mb');
+
+            // Menghitung jumlah bucket yang dialokasikan
+            $bucketsCount = Bucket::join('resources', 'buckets.resource_id', '=', 'resources.id')
+                ->where('resources.subscription_id', $activeSub->id)
+                ->count('buckets.id');
         }
 
-        // menghitung total penggunaan storage dari tabel buckets
-        $storageUsedMb = Bucket::where('user_id', $user->id)->sum('used_storage_mb');
-
         $realData = [
-            'storage_used'  => round($storageUsedMb, 2),  // tampilkan MB langsung
-            'storage_total' => $totalStorageGb * 1024, 
+            'storage_used'  => round($storageUsedMb, 2),  // Menampilkan MB
+            'storage_total' => $totalStorageGb * 1024,    // Konversi GB ke MB
             'package'       => $paketName,
-            'buckets_count' => Bucket::where('user_id', $user->id)->count(),
+            'buckets_count' => $bucketsCount,
         ];
 
-        // kirim data ke tampilan dashboard
+        // Mengirimkan objek data ke tampilan antarmuka (View)
         return view('dashboard', compact('user', 'realData'));
     }
 
     /**
-     * Tarik pemakaian storage asli dari MiniStack, lalu simpan ke DB.
+     * Menarik data pemakaian storage secara langsung dari MiniStack, lalu memperbarui basis data lokal.
      */
     protected function syncStorageUsage($user): void
     {
-        $credential = $user->credential;
-        if (!$credential) {
-            return; // user belum punya credential, skip
+        $activeSub = UserSubscription::where('user_id', $user->id)
+                        ->where('status', 'active')
+                        ->first();
+
+        if (!$activeSub) {
+            return; // Pengguna tidak memiliki langganan aktif, proses dihentikan.
+        }
+
+        // Mengambil kredensial dan sumber daya melalui relasi kontrak sewa
+        $credential = $activeSub->credential;
+        $resource = $activeSub->resource;
+
+        if (!$credential || !$resource) {
+            return; // Infrastruktur IaaS belum teralokasi secara utuh.
         }
 
         try {
             $secretKey = Crypt::decryptString($credential->secret_access_key);
             $ministack = new MiniStackService();
 
-            foreach ($user->buckets as $bucket) {
+            // Mengambil daftar bucket yang terikat dengan ID resource
+            $buckets = Bucket::where('resource_id', $resource->id)->get();
+
+            foreach ($buckets as $bucket) {
                 $usageMb = $ministack->getBucketUsageMb(
                     $credential->ministack_account_id,
                     $credential->access_key_id,
@@ -73,8 +95,8 @@ class DashboardController extends Controller
                 $bucket->update(['used_storage_mb' => $usageMb]);
             }
         } catch (\Exception $e) {
-            // kalau MiniStack lagi mati/error, dashboard tetap tampil pakai data DB terakhir
-            Log::warning('Gagal sinkronisasi storage MiniStack: ' . $e->getMessage());
+            // Sistem merekam galat ke dalam file log jika layanan MiniStack sedang terganggu
+            Log::warning('Kegagalan sinkronisasi storage MiniStack: ' . $e->getMessage());
         }
     }
 }
