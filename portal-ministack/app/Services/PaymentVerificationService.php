@@ -9,7 +9,10 @@ use App\Models\Payment;
 use App\Models\Resource;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use RuntimeException;
+use Throwable;
 
 class PaymentVerificationService
 {
@@ -56,12 +59,29 @@ class PaymentVerificationService
 
             // Asumsi Account ID AWS fiktif karena ini LocalStack
             $dummyAccountId = '000000000000';
+            $username       = str_replace(' ', '', strtolower($user->name));
 
-            // 3. Memanggil fungsi provisionUser() dari rekan tim
-            $miniStackData = $this->miniStackService->provisionUser(
-                $dummyAccountId,
-                str_replace(' ', '', strtolower($user->name))
-            );
+            // 3. Memanggil provisionUser() — dengan fallback otomatis jika LocalStack mati
+            $isOffline = false;
+            try {
+                $miniStackData = $this->miniStackService->provisionUser($dummyAccountId, $username);
+            } catch (Throwable $e) {
+                // LocalStack tidak bisa diakses (Docker belum nyala, port 4566 tertutup, dst).
+                // Catat ke log server agar admin tahu, lalu lanjut dengan kredensial placeholder.
+                Log::warning('[PaymentVerification] LocalStack tidak tersedia, menggunakan kredensial offline.', [
+                    'payment_id' => $payment->id,
+                    'user'       => $user->name,
+                    'error'      => $e->getMessage(),
+                ]);
+
+                $isOffline     = true;
+                $miniStackData = [
+                    'account_id'        => $dummyAccountId,
+                    'access_key_id'     => 'OFFLINE-' . strtoupper(Str::random(16)),
+                    'secret_access_key' => Str::random(40),
+                    'bucket_name'       => $username . '-bucket-offline',
+                ];
+            }
 
             // 4. Mencatat entitas Bucket
             $bucket = Bucket::create([
@@ -83,9 +103,11 @@ class PaymentVerificationService
 
             // 6. Mencatat tindakan verifikasi administrator ke dalam log
             ActivityLog::create([
-                'user_id' => $verifiedByUserId,
-                'action' => 'Verifikasi Pembayaran',
-                'description' => 'Administrator telah memverifikasi pembayaran ID ' . $payment->id . ' dan infrastruktur IaaS telah dialokasikan.',
+                'user_id'     => $verifiedByUserId,
+                'action'      => 'Verifikasi Pembayaran',
+                'description' => 'Administrator telah memverifikasi pembayaran ID ' . $payment->id
+                               . ' dan infrastruktur IaaS telah dialokasikan'
+                               . ($isOffline ? ' (mode offline — LocalStack tidak tersedia saat verifikasi).' : '.'),
             ]);
         });
 

@@ -24,6 +24,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/payments', [AdminPaymentController::class, 'index'])->name('payments.index');
     Route::post('/payments/{payment}/verify', [AdminPaymentController::class, 'verify'])->name('payments.verify');
+    Route::post('/payments/{payment}/reject', [AdminPaymentController::class, 'reject'])->name('payments.reject');
 
     Route::get('/credentials', [AdminCredentialController::class, 'index'])->name('credentials.index');
     Route::post('/credentials/{credential}/toggle', [AdminCredentialController::class, 'toggle'])->name('credentials.toggle');
