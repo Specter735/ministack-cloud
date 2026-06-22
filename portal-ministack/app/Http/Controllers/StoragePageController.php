@@ -22,6 +22,7 @@ class StoragePageController extends Controller
             ->where('us.user_id', $user->id)
             ->select(
                 'us.id',
+                'us.plan_id',
                 'us.status',
                 'us.subscribed_at',
                 'us.expires_at',
@@ -70,6 +71,19 @@ class StoragePageController extends Controller
                 : 0;
         }
 
+        // Cek apakah user boleh checkout — dipakai oleh view untuk menyembunyikan form
+        $existingStatus = DB::table('user_subscriptions')
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'active'])
+            ->value('status');
+
+        $blockCheckout = !is_null($existingStatus);
+        $blockReason   = match ($existingStatus) {
+            'active'  => 'Kamu sudah memiliki paket storage yang aktif.',
+            'pending' => 'Kamu masih memiliki pengajuan yang menunggu verifikasi admin.',
+            default   => null,
+        };
+
         return view('storage.index', compact(
             'plans',
             'subscriptions',
@@ -80,18 +94,39 @@ class StoragePageController extends Controller
             'usedStorageMb',
             'totalStorageMb',
             'remainingStorageMb',
-            'usedPercent'
+            'usedPercent',
+            'blockCheckout',
+            'blockReason'
         ));
     }
 
     public function checkout(Request $request)
     {
         $request->validate([
-            'plan_id' => ['required', 'exists:subscription_plans,id'],
+            'plan_id'      => ['required', 'exists:subscription_plans,id'],
             'metode_bayar' => ['required', 'string', 'max:100'],
         ]);
 
         $user = Auth::user();
+
+        // ── GUARD: tolak checkout baru jika masih ada pengajuan aktif/pending ──
+        $existingStatus = DB::table('user_subscriptions')
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'active'])
+            ->value('status'); // ambil satu nilai, lebih ringan dari first()
+
+        if ($existingStatus === 'active') {
+            return redirect()
+                ->route('storage.index')
+                ->with('error', 'Kamu sudah memiliki paket storage yang aktif. Tidak dapat mengajukan paket baru sebelum paket saat ini berakhir.');
+        }
+
+        if ($existingStatus === 'pending') {
+            return redirect()
+                ->route('storage.index')
+                ->with('error', 'Kamu masih memiliki pengajuan yang sedang menunggu verifikasi admin. Silakan tunggu hingga diproses sebelum mengajukan paket baru.');
+        }
+        // ── END GUARD ──
 
         $plan = DB::table('subscription_plans')
             ->where('id', $request->plan_id)
@@ -108,29 +143,29 @@ class StoragePageController extends Controller
 
         try {
             $subscriptionId = DB::table('user_subscriptions')->insertGetId([
-                'user_id' => $user->id,
-                'plan_id' => $plan->id,
+                'user_id'      => $user->id,
+                'plan_id'      => $plan->id,
                 'subscribed_at' => now(),
-                'expires_at' => now()->addMonth(),
-                'status' => 'pending',
-                'created_at' => now(),
-                'updated_at' => now(),
+                'expires_at'   => now()->addMonth(),
+                'status'       => 'pending',
+                'created_at'   => now(),
+                'updated_at'   => now(),
             ]);
 
             DB::table('payments')->insert([
                 'subscription_id' => $subscriptionId,
-                'metode_bayar' => $request->metode_bayar,
-                'status_bayar' => 'Pending',
-                'created_at' => now(),
-                'updated_at' => now(),
+                'metode_bayar'    => $request->metode_bayar,
+                'status_bayar'    => 'Pending',
+                'created_at'      => now(),
+                'updated_at'      => now(),
             ]);
 
             DB::table('activity_logs')->insert([
-                'user_id' => $user->id,
-                'action' => 'Checkout Paket',
+                'user_id'     => $user->id,
+                'action'      => 'Checkout Paket',
                 'description' => 'Pengguna mengajukan penyewaan paket ' . $plan->name,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at'  => now(),
+                'updated_at'  => now(),
             ]);
 
             DB::commit();
@@ -138,6 +173,7 @@ class StoragePageController extends Controller
             return redirect()
                 ->route('storage.index')
                 ->with('success', 'Pengajuan sewa berhasil dibuat. Silakan tunggu verifikasi pembayaran oleh admin.');
+
         } catch (\Throwable $e) {
             DB::rollBack();
 

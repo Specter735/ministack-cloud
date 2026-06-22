@@ -105,36 +105,62 @@
         </div>
     @endif
 
-    @if ($realData['package'] === 'Belum Berlangganan')
+    {{-- Kartu checkout: tampil jika belum active, termasuk state pending (dengan banner peringatan) --}}
+    @if (!$blockCheckout || ($blockCheckout && $blockReason && str_contains($blockReason, 'menunggu')))
         <div class="auth-card glass" style="margin-top: 20px;">
             <h3 class="panel-title"><i class="fa fa-shopping-cart"></i> Beli Paket IaaS</h3>
-            <p style="margin-bottom: 15px;">Anda belum memiliki paket. Silakan berlangganan untuk mulai membuat S3 Bucket.</p>
 
-            {{-- Checkout sekarang memakai sesi web + CSRF, satu jalur sama dengan halaman Storage (storage.checkout) --}}
-            <form method="POST" action="{{ route('storage.checkout') }}" class="auth-form">
-                @csrf
-                <div class="form-group">
-                    <label for="plan_id">Pilih Paket:</label>
-                    <select id="plan_id" name="plan_id" class="form-input" required>
-                        @forelse ($plans as $plan)
-                            <option value="{{ $plan->id }}">{{ $plan->name }} ({{ $plan->storage_quota_gb }} GB)</option>
-                        @empty
-                            <option value="" disabled selected>Tidak ada paket tersedia</option>
-                        @endforelse
-                    </select>
+            @if ($blockCheckout)
+                {{-- Banner pending --}}
+                <div style="
+                    display:flex; align-items:flex-start; gap:0.75rem;
+                    background: rgba(255,193,7,0.1);
+                    border: 1px solid rgba(255,193,7,0.4);
+                    border-radius: 12px;
+                    padding: 0.9rem 1.1rem;
+                    margin-bottom: 1rem;
+                ">
+                    <i class="fa fa-hourglass-half" style="color:#d97706; margin-top:2px;"></i>
+                    <div>
+                        <strong style="color:#92400e;">Menunggu Verifikasi Admin</strong>
+                        <p style="margin:0.2rem 0 0; color:#78350f; font-size:0.88rem;">
+                            {{ $blockReason }} Pantau statusnya di halaman
+                            <a href="{{ route('storage.index') }}" style="color:#d97706; font-weight:700;">Storage</a>.
+                        </p>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="metode_bayar">Metode Pembayaran:</label>
-                    <select id="metode_bayar" name="metode_bayar" class="form-input" required>
-                        <option value="Transfer Bank">Transfer Bank</option>
-                        <option value="Virtual Account">Virtual Account</option>
-                        <option value="E-Wallet">E-Wallet</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn-primary btn-full">
-                    <i class="fa fa-rocket"></i> Pesan Sekarang
+
+                <button type="button" class="btn-primary btn-full" disabled style="opacity:0.5; cursor:not-allowed;">
+                    <i class="fa fa-lock"></i> Pengajuan Sedang Diproses
                 </button>
-            </form>
+            @else
+                <p style="margin-bottom: 15px;">Anda belum memiliki paket. Silakan berlangganan untuk mulai membuat S3 Bucket.</p>
+
+                <form method="POST" action="{{ route('storage.checkout') }}" class="auth-form">
+                    @csrf
+                    <div class="form-group">
+                        <label for="plan_id">Pilih Paket:</label>
+                        <select id="plan_id" name="plan_id" class="form-input" required>
+                            @forelse ($plans as $plan)
+                                <option value="{{ $plan->id }}">{{ $plan->name }} ({{ $plan->storage_quota_gb }} GB)</option>
+                            @empty
+                                <option value="" disabled selected>Tidak ada paket tersedia</option>
+                            @endforelse
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="metode_bayar">Metode Pembayaran:</label>
+                        <select id="metode_bayar" name="metode_bayar" class="form-input" required>
+                            <option value="Transfer Bank">Transfer Bank</option>
+                            <option value="Virtual Account">Virtual Account</option>
+                            <option value="E-Wallet">E-Wallet</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary btn-full">
+                        <i class="fa fa-rocket"></i> Pesan Sekarang
+                    </button>
+                </form>
+            @endif
         </div>
     @endif
 

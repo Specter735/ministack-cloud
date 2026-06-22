@@ -31,7 +31,10 @@
             <a href="{{ route('credentials.index') }}" class="navbar-link">Kredensial</a>
             @if (Auth::user()->role === 'admin')
                 <a href="{{ route('admin.payments.index') }}" class="navbar-link">
-                    <i class="fa fa-user-shield"></i> Verifikasi Pembayaran
+                    <i class="fa fa-circle-check"></i> Verifikasi Pembayaran
+                </a>
+                <a href="{{ route('admin.credentials.index') }}" class="navbar-link">
+                    <i class="fa fa-key"></i> Kelola Kredensial
                 </a>
             @endif
         </div>

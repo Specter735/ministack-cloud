@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\UserSubscription;
 use App\Models\Bucket;
@@ -58,8 +59,21 @@ class DashboardController extends Controller
             ->orderBy('price')
             ->get();
 
+        // Guard checkout — konsisten dengan StoragePageController
+        $existingStatus = DB::table('user_subscriptions')
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'active'])
+            ->value('status');
+
+        $blockCheckout = !is_null($existingStatus);
+        $blockReason   = match ($existingStatus) {
+            'active'  => 'Kamu sudah memiliki paket storage yang aktif.',
+            'pending' => 'Kamu masih memiliki pengajuan yang menunggu verifikasi admin.',
+            default   => null,
+        };
+
         // Mengirimkan objek data ke tampilan antarmuka (View)
-        return view('dashboard', compact('user', 'realData', 'plans'));
+        return view('dashboard', compact('user', 'realData', 'plans', 'blockCheckout', 'blockReason'));
     }
 
     /**

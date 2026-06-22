@@ -4,8 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\StoragePageController;
 use App\Http\Controllers\CredentialPageController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\AdminPaymentController;
+use App\Http\Controllers\Admin\AdminCredentialController;
 
 // halaman utama ke dashboard
 Route::get('/', function () {
@@ -18,16 +18,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/storage', [StoragePageController::class, 'index'])->name('storage.index');
     Route::get('/credentials', [CredentialPageController::class, 'index'])->name('credentials.index');
     Route::post('/storage/checkout', [StoragePageController::class, 'checkout'])->name('storage.checkout');
-
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 // halaman khusus Administrator (acc pembayaran pending)
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/payments', [AdminPaymentController::class, 'index'])->name('payments.index');
     Route::post('/payments/{payment}/verify', [AdminPaymentController::class, 'verify'])->name('payments.verify');
+
+    Route::get('/credentials', [AdminCredentialController::class, 'index'])->name('credentials.index');
+    Route::post('/credentials/{credential}/toggle', [AdminCredentialController::class, 'toggle'])->name('credentials.toggle');
 });
 
 // memanggil semua rute otomatis dari file auth

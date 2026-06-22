@@ -28,6 +28,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // API Transaksi IaaS (Sisi Pelanggan/Customer)
     // ==========================================
     Route::post('/iaas/checkout', [IaasTransactionController::class, 'checkout']);
+    Route::post('/iaas/upgrade',  [IaasTransactionController::class, 'upgrade']);
 
     // ==========================================
     // API Kontrol (Sisi Administrator)
