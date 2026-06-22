@@ -49,6 +49,8 @@
                    class="btn-secondary btn-small {{ $status === 'Pending' ? 'is-active' : '' }}">Pending</a>
                 <a href="{{ route('admin.payments.index', ['status' => 'Lunas']) }}"
                    class="btn-secondary btn-small {{ $status === 'Lunas' ? 'is-active' : '' }}">Lunas</a>
+                <a href="{{ route('admin.payments.index', ['status' => 'Ditolak']) }}"
+                   class="btn-secondary btn-small {{ $status === 'Ditolak' ? 'is-active' : '' }}">Ditolak</a>
                 <a href="{{ route('admin.payments.index', ['status' => 'all']) }}"
                    class="btn-secondary btn-small {{ $status === 'all' ? 'is-active' : '' }}">Semua</a>
             </div>
@@ -100,6 +102,7 @@
                                 <td>{{ $payment->created_at->format('d M Y, H:i') }}</td>
                                 <td>
                                     @if ($payment->status_bayar === 'Pending')
+<<<<<<< HEAD
                                         <form method="POST" action="{{ route('admin.payments.verify', $payment) }}" 
                                               class="verify-form" 
                                               data-payment-id="{{ $payment->id }}" 
@@ -109,8 +112,32 @@
                                                 <i class="fa fa-check"></i> ACC
                                             </button>
                                         </form>
+=======
+                                        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                                            {{-- Tombol ACC --}}
+                                            <form method="POST" action="{{ route('admin.payments.verify', $payment) }}"
+                                                  onsubmit="return confirm('ACC pembayaran #{{ $payment->id }} dari {{ $payment->subscription->user->name ?? 'pelanggan ini' }}? Infrastruktur IaaS akan langsung dialokasikan.');">
+                                                @csrf
+                                                <button type="submit" class="btn-primary btn-small">
+                                                    <i class="fa fa-check"></i> ACC
+                                                </button>
+                                            </form>
+                                            {{-- Tombol Tolak --}}
+                                            <form method="POST" action="{{ route('admin.payments.reject', $payment) }}"
+                                                  onsubmit="return confirm('Tolak pembayaran #{{ $payment->id }} dari {{ $payment->subscription->user->name ?? 'pelanggan ini' }}? Kontrak sewa akan dibatalkan dan pelanggan dapat mengajukan ulang.');">
+                                                @csrf
+                                                <button type="submit" class="btn-secondary btn-small"
+                                                        style="border-color:#f87171; color:#dc2626;">
+                                                    <i class="fa fa-xmark"></i> Tolak
+                                                </button>
+                                            </form>
+                                        </div>
+>>>>>>> 2879bc0cd6db25108c8192626d2bf100ad3d8bb4
                                     @else
-                                        <span class="badge-soft cyan"><i class="fa fa-check"></i> Terverifikasi</span>
+                                        <span class="badge-soft {{ $payment->status_bayar === 'Lunas' ? 'cyan' : 'yellow' }}">
+                                            <i class="fa fa-{{ $payment->status_bayar === 'Lunas' ? 'check' : 'xmark' }}"></i>
+                                            {{ $payment->status_bayar === 'Lunas' ? 'Terverifikasi' : 'Ditolak' }}
+                                        </span>
                                     @endif
                                 </td>
                             </tr>
@@ -138,6 +165,7 @@
         background: rgba(255, 255, 255, 0.95) !important;
     }
 </style>
+<<<<<<< HEAD
 @endpush
 
 @push('scripts')
@@ -167,4 +195,6 @@
         });
     });
 </script>
+=======
+>>>>>>> 2879bc0cd6db25108c8192626d2bf100ad3d8bb4
 @endpush

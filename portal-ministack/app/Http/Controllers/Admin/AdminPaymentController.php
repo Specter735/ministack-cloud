@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Payment;
 use App\Services\PaymentVerificationService;
 use Illuminate\Http\RedirectResponse;
@@ -48,7 +49,6 @@ class AdminPaymentController extends Controller
                 ->route('admin.payments.index')
                 ->with('success', "Pembayaran #{$payment->id} berhasil diverifikasi. Infrastruktur IaaS telah dialokasikan.");
         } catch (RuntimeException $e) {
-            // Contoh: nota sudah Lunas sebelumnya
             return redirect()
                 ->route('admin.payments.index')
                 ->with('error', $e->getMessage());
@@ -57,5 +57,32 @@ class AdminPaymentController extends Controller
                 ->route('admin.payments.index')
                 ->with('error', 'Gagal memverifikasi pembayaran: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Tolak satu nota pembayaran: batalkan kontrak sewa, user bisa mengajukan ulang.
+     */
+    public function reject(Payment $payment): RedirectResponse
+    {
+        if ($payment->status_bayar !== 'Pending') {
+            return redirect()
+                ->route('admin.payments.index')
+                ->with('error', "Pembayaran #{$payment->id} tidak dapat ditolak karena statusnya sudah '{$payment->status_bayar}'.");
+        }
+
+        $payment->update(['status_bayar' => 'Ditolak']);
+        $payment->subscription()->update(['status' => 'cancelled']);
+
+        $userName = $payment->subscription->user->name ?? 'N/A';
+
+        ActivityLog::create([
+            'user_id'     => Auth::id(),
+            'action'      => 'Tolak Pembayaran',
+            'description' => "Administrator menolak pembayaran #{$payment->id} atas nama {$userName}. Kontrak sewa dibatalkan.",
+        ]);
+
+        return redirect()
+            ->route('admin.payments.index')
+            ->with('success', "Pembayaran #{$payment->id} atas nama {$userName} berhasil ditolak.");
     }
 }
