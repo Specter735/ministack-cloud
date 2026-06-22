@@ -111,19 +111,28 @@
                                 <td>{{ $credential->created_at->format('d M Y, H:i') }}</td>
                                 <td>
                                     @php
-                                        $isAktif    = $credential->status_kunci === 'Aktif';
+                                        $isAktif = $credential->status_kunci === 'Aktif';
                                         $targetLabel = $isAktif ? 'Cabut' : 'Aktifkan';
-                                        $confirmMsg  = $isAktif
-                                            ? "Cabut kunci akses #{$credential->id} milik " . ($credential->subscription->user->name ?? 'pelanggan ini') . "? Pelanggan tidak dapat mengakses storage sampai diaktifkan kembali."
-                                            : "Aktifkan kembali kunci akses #{$credential->id} milik " . ($credential->subscription->user->name ?? 'pelanggan ini') . "?";
+                                        $targetAction = $isAktif ? 'revoke' : 'activate';
                                     @endphp
-                                    <form method="POST" action="{{ route('admin.credentials.toggle', $credential) }}"
-                                          onsubmit="return confirm('{{ $confirmMsg }}');">
+
+                                    <form method="POST"
+                                        action="{{ route('admin.credentials.toggle', $credential) }}"
+                                        class="credential-action-form"
+                                        data-action="{{ $targetAction }}"
+                                        data-credential-id="{{ $credential->id }}"
+                                        data-customer="{{ $credential->subscription->user->name ?? 'pelanggan' }}"
+                                        data-plan="{{ $credential->subscription->plan->name ?? '-' }}"
+                                        data-bucket="{{ $credential->bucket_name ?? '-' }}">
                                         @csrf
+
                                         <button type="submit"
-                                                class="{{ $isAktif ? 'btn-secondary' : 'btn-primary' }} btn-small">
-                                            <i class="fa {{ $isAktif ? 'fa-ban' : 'fa-check' }}"></i>
-                                            {{ $targetLabel }}
+                                                class="btn-secondary btn-small credential-toggle-btn {{ $isAktif ? 'is-revoke' : 'is-activate' }}">
+                                            @if ($isAktif)
+                                                <i class="fa fa-ban"></i> Cabut
+                                            @else
+                                                <i class="fa fa-rotate"></i> Aktifkan
+                                            @endif
                                         </button>
                                     </form>
                                 </td>
@@ -146,4 +155,52 @@
         border-color: var(--candy-pink);
     }
 </style>
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    document.querySelectorAll('.credential-action-form').forEach((form) => {
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const action = this.dataset.action;
+            const credentialId = this.dataset.credentialId;
+            const customer = this.dataset.customer || 'pelanggan';
+            const plan = this.dataset.plan || '-';
+            const bucket = this.dataset.bucket || '-';
+
+            const isRevoke = action === 'revoke';
+
+            const confirmResult = await Swal.fire({
+                title: isRevoke ? 'Cabut Kredensial?' : 'Aktifkan Kredensial?',
+                html: isRevoke
+                    ? `Kamu akan mencabut kredensial <b>#${credentialId}</b> milik <b>${customer}</b> untuk paket <b>${plan}</b>.<br><br><span style="font-size:0.9em; color:#64748b;">Bucket: <b>${bucket}</b><br>Setelah dicabut, pelanggan tidak dapat menampilkan Secret Access Key sampai kredensial diaktifkan kembali.</span>`
+                    : `Kamu akan mengaktifkan kembali kredensial <b>#${credentialId}</b> milik <b>${customer}</b> untuk paket <b>${plan}</b>.<br><br><span style="font-size:0.9em; color:#64748b;">Bucket: <b>${bucket}</b><br>Setelah aktif, pelanggan dapat kembali menggunakan kredensial storage.</span>`,
+                icon: isRevoke ? 'warning' : 'question',
+                showCancelButton: true,
+                confirmButtonColor: isRevoke ? '#ff2e93' : '#00a8ba',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: isRevoke
+                    ? '<i class="fa fa-ban"></i> Ya, Cabut'
+                    : '<i class="fa fa-rotate"></i> Ya, Aktifkan',
+                cancelButtonText: '<i class="fa fa-times"></i> Batal',
+                customClass: {
+                    popup: 'glass-popup'
+                }
+            });
+
+            if (!confirmResult.isConfirmed) {
+                return;
+            }
+
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Memproses...';
+
+            this.submit();
+        });
+    });
+</script>
 @endpush

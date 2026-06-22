@@ -33,8 +33,18 @@ class AdminPaymentController extends Controller
             ->get();
 
         $pendingCount = Payment::where('status_bayar', 'Pending')->count();
+        $lunasCount = Payment::where('status_bayar', 'Lunas')->count();
+        $ditolakCount = Payment::where('status_bayar', 'Ditolak')->count();
 
-        return view('admin.payments.index', compact('payments', 'status', 'pendingCount'));
+        return view('admin.payments.index', compact(
+            'payments',
+            'status',
+            'pendingCount',
+            'lunasCount',
+            'ditolakCount'
+        ));
+
+        
     }
 
     /**
@@ -42,6 +52,12 @@ class AdminPaymentController extends Controller
      */
     public function verify(Payment $payment): RedirectResponse
     {
+        if ($payment->status_bayar !== 'Pending') {
+            return redirect()
+                ->route('admin.payments.index')
+                ->with('error', "Pembayaran #{$payment->id} tidak dapat diverifikasi karena statusnya sudah {$payment->status_bayar}.");
+        }
+
         try {
             $this->paymentVerificationService->verify($payment->id, Auth::id());
 
@@ -67,22 +83,23 @@ class AdminPaymentController extends Controller
         if ($payment->status_bayar !== 'Pending') {
             return redirect()
                 ->route('admin.payments.index')
-                ->with('error', "Pembayaran #{$payment->id} tidak dapat ditolak karena statusnya sudah '{$payment->status_bayar}'.");
+                ->with('error', "Pembayaran #{$payment->id} tidak dapat ditolak karena statusnya sudah {$payment->status_bayar}.");
         }
 
         $payment->update(['status_bayar' => 'Ditolak']);
-        $payment->subscription()->update(['status' => 'cancelled']);
 
-        $userName = $payment->subscription->user->name ?? 'N/A';
+        if ($payment->subscription) {
+            $payment->subscription->update(['status' => 'cancelled']);
+        }
 
         ActivityLog::create([
-            'user_id'     => Auth::id(),
-            'action'      => 'Tolak Pembayaran',
-            'description' => "Administrator menolak pembayaran #{$payment->id} atas nama {$userName}. Kontrak sewa dibatalkan.",
+            'user_id' => Auth::id(),
+            'action' => 'Tolak Pembayaran',
+            'description' => 'Administrator menolak pembayaran ID ' . $payment->id . '.',
         ]);
 
         return redirect()
             ->route('admin.payments.index')
-            ->with('success', "Pembayaran #{$payment->id} atas nama {$userName} berhasil ditolak.");
+            ->with('success', "Pembayaran #{$payment->id} berhasil ditolak.");
     }
 }

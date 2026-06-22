@@ -43,8 +43,12 @@
                 <i class="fa fa-user-circle"></i>
                 {{ Auth::user()->name }}
             </span>
-            <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+            <form method="POST"
+                action="{{ route('logout') }}"
+                class="logout-confirm-form"
+                style="display:inline;">
                 @csrf
+
                 <button type="submit" class="btn-logout">
                     <i class="fa fa-sign-out-alt"></i> Logout
                 </button>
@@ -63,6 +67,62 @@
     <footer class="footer">
         <p>🍬 ChromaStack &copy; {{ date('Y') }} — Komputasi Awan Project · Universitas Lambung Mangkurat</p>
     </footer>
+
+
+    <script>
+    function loadSweetAlertIfNeeded() {
+        return new Promise((resolve, reject) => {
+            if (window.Swal) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+        document.querySelectorAll('.logout-confirm-form').forEach((form) => {
+            form.addEventListener('submit', async function (event) {
+                event.preventDefault();
+
+                try {
+                    await loadSweetAlertIfNeeded();
+
+                    const confirmResult = await Swal.fire({
+                        title: 'Keluar dari Akun?',
+                        html: 'Apakah kamu yakin ingin logout dari akun ini?<br><br><span style="font-size:0.9em; color:#64748b;">Kamu perlu login kembali untuk mengakses dashboard ChromaStack.</span>',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ff2e93',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: '<i class="fa fa-sign-out-alt"></i> Ya, Logout',
+                        cancelButtonText: '<i class="fa fa-times"></i> Batal',
+                        customClass: {
+                            popup: 'glass-popup'
+                        }
+                    });
+
+                    if (!confirmResult.isConfirmed) {
+                        return;
+                    }
+
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    const originalText = submitButton.innerHTML;
+
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Keluar...';
+
+                    form.submit();
+                } catch (error) {
+                    form.submit();
+                }
+            });
+        });
+    </script>
 
     @stack('scripts')
 </body>

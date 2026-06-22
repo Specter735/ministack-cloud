@@ -1098,3 +1098,60 @@ body {
         flex-direction: column;
     }
 }
+
+/* SweetAlert ChromaStack */
+.swal2-popup.glass-popup {
+    border-radius: 20px !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.95) !important;
+    box-shadow: 0 22px 60px rgba(17, 24, 39, 0.18) !important;
+}
+
+.swal2-title {
+    color: var(--text-dark) !important;
+    font-weight: 900 !important;
+}
+
+.swal2-html-container {
+    color: var(--text-light) !important;
+    line-height: 1.55 !important;
+}
+
+/* Admin Credential Action */
+.credential-action-form {
+    margin: 0;
+}
+
+.credential-toggle-btn {
+    min-width: 112px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+.credential-toggle-btn.is-revoke {
+    border-color: rgba(255, 46, 147, 0.38) !important;
+    color: #ff2e93 !important;
+    background: rgba(255, 46, 147, 0.08) !important;
+}
+
+.credential-toggle-btn.is-revoke:hover {
+    background: rgba(255, 46, 147, 0.16) !important;
+    box-shadow: 0 8px 18px rgba(255, 46, 147, 0.16);
+    transform: translateY(-1px);
+}
+
+.credential-toggle-btn.is-activate {
+    border-color: rgba(0, 212, 255, 0.38) !important;
+    color: #087f8c !important;
+    background: rgba(0, 212, 255, 0.10) !important;
+}
+
+.credential-toggle-btn.is-activate:hover {
+    background: rgba(0, 212, 255, 0.18) !important;
+    box-shadow: 0 8px 18px rgba(0, 212, 255, 0.16);
+    transform: translateY(-1px);
+}
+

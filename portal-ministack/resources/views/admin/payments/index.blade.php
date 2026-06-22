@@ -27,14 +27,36 @@
     @endif
 
     <section class="stats-grid">
-        <div class="stat-card card-storage">
+        <div class="stat-card card-ram">
             <div class="stat-icon">
                 <i class="fa fa-hourglass-half"></i>
             </div>
             <div class="stat-info">
-                <div class="stat-label">Menunggu Verifikasi</div>
+                <div class="stat-label">Pembayaran Pending</div>
                 <div class="stat-value">{{ $pendingCount }}</div>
-                <p class="stat-note">Nota pembayaran berstatus Pending</p>
+                <p class="stat-note">Nota pembayaran yang menunggu verifikasi</p>
+            </div>
+        </div>
+
+        <div class="stat-card card-cpu">
+            <div class="stat-icon">
+                <i class="fa fa-check-circle"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-label">Pembayaran Lunas</div>
+                <div class="stat-value">{{ $lunasCount }}</div>
+                <p class="stat-note">Nota pembayaran yang sudah diverifikasi</p>
+            </div>
+        </div>
+
+        <div class="stat-card card-storage">
+            <div class="stat-icon">
+                <i class="fa fa-ban"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-label">Pembayaran Ditolak</div>
+                <div class="stat-value">{{ $ditolakCount }}</div>
+                <p class="stat-note">Nota pembayaran yang ditolak admin</p>
             </div>
         </div>
     </section>
@@ -102,37 +124,35 @@
                                 <td>{{ $payment->created_at->format('d M Y, H:i') }}</td>
                                 <td>
                                     @if ($payment->status_bayar === 'Pending')
-<<<<<<< HEAD
-                                        <form method="POST" action="{{ route('admin.payments.verify', $payment) }}" 
-                                              class="verify-form" 
-                                              data-payment-id="{{ $payment->id }}" 
-                                              data-customer-name="{{ $payment->subscription->user->name ?? 'pelanggan' }}">
-                                            @csrf
-                                            <button type="button" class="btn-primary btn-small btn-verify">
-                                                <i class="fa fa-check"></i> ACC
-                                            </button>
-                                        </form>
-=======
-                                        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
-                                            {{-- Tombol ACC --}}
-                                            <form method="POST" action="{{ route('admin.payments.verify', $payment) }}"
-                                                  onsubmit="return confirm('ACC pembayaran #{{ $payment->id }} dari {{ $payment->subscription->user->name ?? 'pelanggan ini' }}? Infrastruktur IaaS akan langsung dialokasikan.');">
+                                        <div class="payment-action-stack">
+                                            <form method="POST"
+                                                action="{{ route('admin.payments.verify', $payment) }}"
+                                                class="payment-action-form"
+                                                data-action="verify"
+                                                data-payment-id="{{ $payment->id }}"
+                                                data-customer="{{ $payment->subscription->user->name ?? 'pelanggan' }}"
+                                                data-plan="{{ $payment->subscription->plan->name ?? '-' }}">
                                                 @csrf
-                                                <button type="submit" class="btn-primary btn-small">
+
+                                                <button type="submit" class="btn-primary btn-small payment-action-btn">
                                                     <i class="fa fa-check"></i> ACC
                                                 </button>
                                             </form>
-                                            {{-- Tombol Tolak --}}
-                                            <form method="POST" action="{{ route('admin.payments.reject', $payment) }}"
-                                                  onsubmit="return confirm('Tolak pembayaran #{{ $payment->id }} dari {{ $payment->subscription->user->name ?? 'pelanggan ini' }}? Kontrak sewa akan dibatalkan dan pelanggan dapat mengajukan ulang.');">
+
+                                            <form method="POST"
+                                                action="{{ route('admin.payments.reject', $payment) }}"
+                                                class="payment-action-form"
+                                                data-action="reject"
+                                                data-payment-id="{{ $payment->id }}"
+                                                data-customer="{{ $payment->subscription->user->name ?? 'pelanggan' }}"
+                                                data-plan="{{ $payment->subscription->plan->name ?? '-' }}">
                                                 @csrf
-                                                <button type="submit" class="btn-secondary btn-small"
-                                                        style="border-color:#f87171; color:#dc2626;">
+
+                                                <button type="submit" class="btn-secondary btn-small payment-action-btn payment-reject-btn">
                                                     <i class="fa fa-xmark"></i> Tolak
                                                 </button>
                                             </form>
                                         </div>
->>>>>>> 2879bc0cd6db25108c8192626d2bf100ad3d8bb4
                                     @else
                                         <span class="badge-soft {{ $payment->status_bayar === 'Lunas' ? 'cyan' : 'yellow' }}">
                                             <i class="fa fa-{{ $payment->status_bayar === 'Lunas' ? 'check' : 'xmark' }}"></i>
@@ -157,44 +177,103 @@
         color: #fff;
         border-color: var(--candy-pink);
     }
-    /* Styling untuk SweetAlert2 Glassmorphism */
+
+    .payment-action-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        align-items: flex-start;
+    }
+
+    .payment-action-stack form {
+        margin: 0;
+    }
+
+    .payment-action-btn {
+        min-width: 92px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+    }
+
+    .payment-reject-btn {
+        border-color: rgba(255, 46, 147, 0.38) !important;
+        color: #ff2e93 !important;
+        background: rgba(255, 46, 147, 0.08) !important;
+    }
+
+    .payment-reject-btn:hover {
+        background: rgba(255, 46, 147, 0.16) !important;
+        box-shadow: 0 8px 18px rgba(255, 46, 147, 0.16);
+        transform: translateY(-1px);
+    }
+
     .swal2-popup.glass-popup {
         border-radius: 20px !important;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.2);
         background: rgba(255, 255, 255, 0.95) !important;
+        box-shadow: 0 22px 60px rgba(17, 24, 39, 0.18) !important;
+    }
+
+    .swal2-title {
+        color: var(--text-dark) !important;
+        font-weight: 900 !important;
+    }
+
+    .swal2-html-container {
+        color: var(--text-light) !important;
+        line-height: 1.55 !important;
     }
 </style>
-<<<<<<< HEAD
 @endpush
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    document.querySelectorAll('.btn-verify').forEach(button => {
-        button.addEventListener('click', function() {
-            const form = this.closest('.verify-form');
-            const paymentId = form.dataset.paymentId;
-            const customerName = form.dataset.customerName;
 
-            Swal.fire({
-                title: 'Verifikasi Pembayaran?',
-                html: `ACC nota <b>#${paymentId}</b> dari <b>${customerName}</b>?<br><br><span style="font-size: 0.9em; color: #64748b;">Infrastruktur IaaS akan langsung dialokasikan setelah di-ACC.</span>`,
-                icon: 'question',
+<script>
+    document.querySelectorAll('.payment-action-form').forEach((form) => {
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const action = this.dataset.action;
+            const paymentId = this.dataset.paymentId;
+            const customer = this.dataset.customer || 'pelanggan';
+            const plan = this.dataset.plan || '-';
+
+            const isVerify = action === 'verify';
+
+            const confirmResult = await Swal.fire({
+                title: isVerify ? 'ACC Pembayaran?' : 'Tolak Pembayaran?',
+                html: isVerify
+                    ? `Kamu akan menyetujui pembayaran <b>#${paymentId}</b> dari <b>${customer}</b> untuk paket <b>${plan}</b>.<br><br><span style="font-size:0.9em; color:#64748b;">Setelah di-ACC, penyewaan akan aktif dan kredensial IaaS akan dibuat.</span>`
+                    : `Kamu akan menolak pembayaran <b>#${paymentId}</b> dari <b>${customer}</b> untuk paket <b>${plan}</b>.<br><br><span style="font-size:0.9em; color:#64748b;">Setelah ditolak, penyewaan akan dibatalkan dan pelanggan perlu mengajukan ulang.</span>`,
+                icon: isVerify ? 'question' : 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#00a8ba',
-                cancelButtonColor: '#ff2e93',
-                confirmButtonText: '<i class="fa fa-check"></i> Ya, ACC Sekarang',
+                confirmButtonColor: isVerify ? '#00a8ba' : '#ff2e93',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: isVerify
+                    ? '<i class="fa fa-check"></i> Ya, ACC Sekarang'
+                    : '<i class="fa fa-xmark"></i> Ya, Tolak',
                 cancelButtonText: '<i class="fa fa-times"></i> Batal',
-                customClass: { popup: 'glass-popup' }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    form.submit();
+                customClass: {
+                    popup: 'glass-popup'
                 }
             });
+
+            if (!confirmResult.isConfirmed) {
+                return;
+            }
+
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Memproses...';
+
+            this.submit();
         });
     });
 </script>
-=======
->>>>>>> 2879bc0cd6db25108c8192626d2bf100ad3d8bb4
 @endpush
