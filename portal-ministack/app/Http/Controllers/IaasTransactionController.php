@@ -86,15 +86,72 @@ class IaasTransactionController extends Controller
         }
 
         try {
-            $this->paymentVerificationService->verify((int) $paymentId, Auth::id());
+            // 1. Mengubah status pembayaran menjadi Lunas dan mengaktifkan kontrak sewa
+            $payment->status_bayar = 'Lunas';
+            $payment->save();
 
-            return response()->json(['message' => 'Verifikasi berhasil. Infrastruktur IaaS siap digunakan oleh pelanggan.'], 200);
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['error' => 'Nota pembayaran tidak ditemukan.'], 404);
-        } catch (RuntimeException $e) {
-            // Contoh: pembayaran sudah Lunas sebelumnya
-            return response()->json(['message' => $e->getMessage()], 400);
-        } catch (Throwable $e) {
+            $subscription = $payment->subscription;
+            $subscription->status = 'active';
+            $subscription->save(); // Aktivasi status kontrak sewa
+
+            $plan = $subscription->plan;
+
+            // 2. Mengalokasikan sumber daya (Resource)
+            $resource = Resource::create([
+                'subscription_id' => $subscription->id,
+                'kapasitas_storage' => $plan->storage_quota_gb
+            ]);
+
+            // Mengambil entitas User yang kini sudah dijamin aman ketersediaannya di memori
+            $user = $subscription->user; 
+            
+            // Asumsi Account ID AWS fiktif karena ini LocalStack
+            $dummyAccountId = '000000000000'; 
+
+            // 3. Memanggil fungsi provisionUser() dari rekan tim
+            $miniStackData = $this->miniStackService->provisionUser(
+                $dummyAccountId, 
+                str_replace(' ', '', strtolower($user->name))
+            );
+
+            // 4. Mencatat entitas Bucket
+            $bucket = Bucket::create([
+                'resource_id' => $resource->id,
+                'bucket_name' => $miniStackData['bucket_name'],
+                'ministack_bucket_id' => null,
+                'used_storage_mb' => 0
+            ]);
+
+            // 5. Menerbitkan kunci akses (Credentials)
+            Credential::create([
+                'subscription_id' => $subscription->id,
+                'ministack_account_id' => $miniStackData['account_id'],
+                'access_key_id' => $miniStackData['access_key_id'],
+                'secret_access_key' => encrypt($miniStackData['secret_access_key']),
+                'bucket_name' => $bucket->bucket_name,
+                'status_kunci' => 'Aktif'
+            ]);
+
+            // 6. Mencatat tindakan verifikasi administrator ke dalam log
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'Verifikasi Pembayaran',
+                'description' => 'Administrator telah memverifikasi pembayaran ID ' . $payment->id . ' dan infrastruktur IaaS telah dialokasikan.'
+            ]);
+
+            DB::commit();
+            $payment->refresh();
+            $subscription->refresh();
+
+            return response()->json([
+                'message' => 'Verifikasi berhasil. Infrastruktur IaaS siap digunakan oleh pelanggan.',
+                'payment_id' => $payment->id,
+                'status_bayar' => $payment->status_bayar,
+                'subscription_id' => $subscription->id,
+                'subscription_status' => $subscription->status,
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json(['error' => 'Kegagalan alokasi infrastruktur: ' . $e->getMessage()], 500);
         }
     }

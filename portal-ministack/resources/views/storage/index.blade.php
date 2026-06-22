@@ -123,11 +123,7 @@
                         </div>
                     </div>
 
-                    <form method="POST" action="{{ route('storage.checkout') }}" style="margin-top: 1rem;">
-                        @csrf
-
-                        <input type="hidden" name="plan_id" value="{{ $plan->id }}">
-
+                    <form class="checkout-api-form" data-plan-id="{{ $plan->id }}" style="margin-top: 1rem;">
                         <div style="margin-bottom: 1rem;">
                             <label style="display:block; margin-bottom:0.45rem; font-weight:800; color:var(--text-dark);">
                                 Metode Bayar
@@ -201,3 +197,63 @@
 
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.querySelectorAll('.checkout-api-form').forEach((form) => {
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const planId = this.dataset.planId;
+            const metodeBayar = this.querySelector('select[name="metode_bayar"]').value;
+            const token = localStorage.getItem('auth_token');
+
+            if (!metodeBayar) {
+                alert('Silakan pilih metode bayar terlebih dahulu.');
+                return;
+            }
+
+            if (!token) {
+                alert('Token API tidak ditemukan. Silakan login ulang terlebih dahulu.');
+                return;
+            }
+
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Mengajukan...';
+
+            try {
+                const response = await fetch('/api/iaas/checkout', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        plan_id: planId,
+                        metode_bayar: metodeBayar,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    const message = data.message || 'Pengajuan sewa gagal.';
+                    throw new Error(message);
+                }
+
+                alert(data.message || 'Pengajuan sewa berhasil dibuat.');
+                window.location.reload();
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+            }
+        });
+    });
+</script>
+@endpush

@@ -23,30 +23,32 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request (Hibrida: Sesi Web + Token API).
      */
-    public function store(LoginRequest $request): RedirectResponse|JsonResponse
+    public function store(LoginRequest $request)
     {
         // Validasi kredensial + rate limiting bawaan LoginRequest tetap jalan
         $request->authenticate();
 
         $request->session()->regenerate();
 
-        /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // Bersihkan token lama & terbitkan token Sanctum baru
         $user->tokens()->delete();
+
         $token = $user->createToken('ChromaStackToken')->plainTextToken;
 
-        // PAKSA KEMBALIKAN JSON JIKA PERMINTAAN DARI JAVASCRIPT (Axios)
-        if ($request->expectsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+        if (
+            $request->expectsJson() ||
+            $request->ajax() ||
+            $request->header('X-Requested-With') === 'XMLHttpRequest'
+        ) {
             return response()->json([
                 'success' => true,
                 'message' => 'Login berhasil.',
-                'token'   => $token,
+                'token' => $token,
+                'redirect' => route('dashboard'),
             ]);
         }
 
-        // Fallback jika login dilakukan tanpa JavaScript
         return redirect()->intended(route('dashboard', absolute: false));
     }
 
@@ -55,7 +57,6 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
-        // Hapus token API Sanctum sebelum sesi diputus
         if ($request->user()) {
             $request->user()->tokens()->delete();
         }

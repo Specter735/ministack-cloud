@@ -42,13 +42,12 @@ export const IaasService = {
 
     // [User] Ambil Riwayat Langganan
     getSubscriptions: async () => {
-        const response = await apiClient.get("/users/subscriptions");
-        return response.data;
+    const response = await apiClient.get("/iaas/subscriptions");
+    return response.data;
     },
 
-    // [Global] Ambil Log Aktivitas
     getActivityLogs: async () => {
-        const response = await apiClient.get("/users/logs");
+        const response = await apiClient.get("/iaas/logs");
         return response.data;
     },
 

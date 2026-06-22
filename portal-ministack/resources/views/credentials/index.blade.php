@@ -80,6 +80,20 @@
             </div>
         </section>
 
+        @if ($credential->status_kunci === 'Dicabut')
+            <section class="empty-state" style="margin-bottom: 1.5rem;">
+                <div class="empty-icon">🚫</div>
+                <h2 class="empty-title">Kredensial Dicabut</h2>
+                <p class="empty-text">
+                    Access Key dan Secret Key sedang dinonaktifkan oleh administrator.
+                    Silakan hubungi admin jika ingin mengaktifkan kembali akses layanan storage.
+                </p>
+                <span class="badge-soft yellow">
+                    <i class="fa fa-ban"></i> Status Kunci Dicabut
+                </span>
+            </section>
+        @endif
+
         <section class="info-panel">
             <h2 class="panel-title">
                 <i class="fa fa-lock"></i> Access Credential
@@ -129,18 +143,28 @@
                         </span>
 
                         <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                            <a href="{{ route('credentials.index', ['show_secret' => request()->boolean('show_secret') ? 0 : 1]) }}"
-                               class="btn-secondary btn-small">
-                                {{ request()->boolean('show_secret') ? 'Sembunyikan' : 'Tampilkan' }}
-                            </a>
+                            @if ($credential->status_kunci === 'Aktif')
+                                <a href="{{ route('credentials.index', ['show_secret' => request()->boolean('show_secret') ? 0 : 1]) }}"
+                                   class="btn-secondary btn-small">
+                                    {{ request()->boolean('show_secret') ? 'Sembunyikan' : 'Tampilkan' }}
+                                </a>
 
-                            @if ($secretAccessKey)
-                                <button type="button" onclick="copyText('secretKey')" class="btn-secondary btn-small">Copy</button>
+                                @if ($secretAccessKey)
+                                    <button type="button" onclick="copyText('secretKey')" class="btn-secondary btn-small">Copy</button>
+                                @endif
+                            @else
+                                <span class="badge-soft yellow">
+                                    <i class="fa fa-ban"></i> Dicabut
+                                </span>
                             @endif
                         </div>
                     </div>
 
-                    @if ($secretAccessKey)
+                    @if ($credential->status_kunci === 'Dicabut')
+                        <code class="code-box" style="border-color: rgba(255,245,0,0.35); background: rgba(255,245,0,0.12);">
+                            Secret Key dinonaktifkan oleh administrator.
+                        </code>
+                    @elseif ($secretAccessKey)
                         <code id="secretKey" class="code-box" style="border-color: rgba(255,46,147,0.25); background: rgba(255,46,147,0.06);">
                             {{ $secretAccessKey }}
                         </code>
