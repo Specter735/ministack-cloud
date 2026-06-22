@@ -4,6 +4,8 @@ namespace App\Services;
 
 use Aws\Iam\IamClient;
 use Aws\S3\S3Client;
+use Aws\Iam\Exception\IamException;
+use Aws\Exception\AwsException;
 
 class MiniStackService
 {
@@ -46,8 +48,37 @@ class MiniStackService
     public function provisionUser(string $accountId, string $username): array
     {
         $iam = $this->iamClient($accountId);
-        $iam->createUser(['UserName' => $username]);
-        $key = $iam->createAccessKey(['UserName' => $username])['AccessKey'];
+        // Create user if not exists (LocalStack returns EntityAlreadyExists if present)
+        try {
+            $iam->createUser(['UserName' => $username]);
+        } catch (IamException|AwsException $e) {
+            // If user already exists, continue; otherwise rethrow
+            $code = method_exists($e, 'getAwsErrorCode') ? $e->getAwsErrorCode() : null;
+            if ($code !== 'EntityAlreadyExists') {
+                throw $e;
+            }
+        }
+
+        // Try create access key. If it fails (e.g. existing keys limit), remove existing keys and recreate.
+        try {
+            $key = $iam->createAccessKey(['UserName' => $username])['AccessKey'];
+        } catch (IamException|AwsException $e) {
+            // If there are existing access keys, delete them and try again.
+            try {
+                $list = $iam->listAccessKeys(['UserName' => $username]);
+                foreach ($list['AccessKeyMetadata'] ?? [] as $meta) {
+                    $iam->deleteAccessKey([
+                        'UserName' => $username,
+                        'AccessKeyId' => $meta['AccessKeyId'],
+                    ]);
+                }
+                // recreate
+                $key = $iam->createAccessKey(['UserName' => $username])['AccessKey'];
+            } catch (IamException $inner) {
+                // give up with original exception if still failing
+                throw $e;
+            }
+        }
 
         $bucketName = $this->sanitizeBucketName($username);
         $this->s3Client($key['AccessKeyId'], $key['SecretAccessKey'])

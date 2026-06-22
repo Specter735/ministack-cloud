@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\StoragePageController;
 use App\Http\Controllers\CredentialPageController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\AdminPaymentController;
 
 // halaman utama ke dashboard
@@ -17,6 +18,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/storage', [StoragePageController::class, 'index'])->name('storage.index');
     Route::get('/credentials', [CredentialPageController::class, 'index'])->name('credentials.index');
     Route::post('/storage/checkout', [StoragePageController::class, 'checkout'])->name('storage.checkout');
+
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 // halaman khusus Administrator (acc pembayaran pending)
